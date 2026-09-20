@@ -137,7 +137,20 @@ int main(int argc, const char *argv[]) {
         NSData *validData = [NSJSONSerialization dataWithJSONObject:fast options:0 error:nil];
         CHECK([validData writeToURL:configURL atomically:YES]);
         ETAppDelegate *b = bridge();
-        for (NSString *source in @[@"play", @"pause", @"toggle"]) [b receive:source];
+        [b receive:@"pause"];
+        CHECK([logs containsObject:@"IGNORED source=pause reason=pause-filter"]);
+        CHECK(b.pending.count == 0 && !b.busy && b.received == 0);
+        CHECK(b.sent == 0 && sends == 0 && !hasLog(@"SENDING"));
+        [logs removeAllObjects];
+        b.busy = YES;
+        [b receive:@"play"];
+        NSArray *queued = [b.pending copy];
+        [b receive:@"pause"];
+        CHECK([b.pending isEqualToArray:queued] && b.received == 1 && sends == 0);
+        CHECK([logs containsObject:@"IGNORED source=pause reason=pause-filter"]);
+        [b cancelPending];
+        b = bridge();
+        for (NSString *source in @[@"play", @"toggle", @"play"]) [b receive:source];
         drain(b);
         CHECK(b.received == 3 && b.sent == 3 && sends == 3);
         [b applicationShouldHandleReopen:(NSApplication *)NSObject.new hasVisibleWindows:NO];
@@ -199,6 +212,22 @@ int main(int argc, const char *argv[]) {
         [session close];
         [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
         CHECK(sources.count == 3 && center.playCommand.handler == nil && !center.playCommand.enabled);
+        // Route real media callback handling through the dispatcher: pause is logged,
+        // while play/toggle still send and no pause request enters the queue.
+        ETAppDelegate *filtered = bridge();
+        [logs removeAllObjects];
+        NSUInteger sendsBefore = sends;
+        ETMediaSession *filteredSession = [[ETMediaSession alloc] initWithHandler:^(NSString *source) { [filtered receive:source]; }];
+        [filteredSession setEnabled:YES];
+        for (TestCommand *command in @[center.playCommand, center.pauseCommand, center.togglePlayPauseCommand])
+            command.handler((MPRemoteCommandEvent *)NSObject.new);
+        [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
+        drain(filtered);
+        CHECK(filtered.received == 2 && filtered.sent == 2 && sends == sendsBefore + 2);
+        CHECK(filtered.pending.count == 0);
+        CHECK([logs containsObject:@"IGNORED source=pause reason=pause-filter"]);
+        CHECK(hasLog(@"source=play") && hasLog(@"source=toggle") && !hasLog(@"RECEIVED id=3"));
+        [filteredSession close];
         printf("PASS: %lu checks; no real keyboard events or media sessions created.\n", checks);
     }
     return 0;
