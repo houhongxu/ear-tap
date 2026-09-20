@@ -1,0 +1,18 @@
+name: macOS checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  build-and-test:
+    runs-on: macos-14
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test without posting input events
+        run: ./scripts/test.sh
+      - name: Build and verify app signature
+        run: ./scripts/build.sh
+      - name: Validate bundled default
+        run: ./build/EarTap.app/Contents/MacOS/EarTap --validate resources/shortcut.json

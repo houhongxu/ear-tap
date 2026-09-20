@@ -1,0 +1,10 @@
+{
+  "key": "v",
+  "modifiers": [
+    "shift",
+    "command"
+  ],
+  "settleDelayMs": 250,
+  "eventIntervalMs": 40,
+  "keyHoldMs": 80
+}
