@@ -17,6 +17,7 @@ Shortcut：解析配置 → 创建完整按键序列 → 发送
 - `main.m`：配置初始化、进程锁、命令行检查及应用入口。
 - `MediaSession.m`：注册三种命令，发布/释放 Now Playing 会话。回调异步送到主线程，避免跨线程同步等待。
 - `AppDelegate.m`：菜单、权限、串行调度、暂停、休眠/用户会话切换和退出。
+- `StatusIcon.m`：绘制自适应深浅色菜单栏的模板图标，并根据运行状态选择颜色和辅助功能标签。
 - `Shortcut.m`：严格配置校验和可单独测试的事件序列构造；发送使用独立事件源状态。
 - `Storage.m`：用户配置初始化和限长日志。
 
@@ -49,6 +50,6 @@ Shortcut：解析配置 → 创建完整按键序列 → 发送
 
 最低部署版本为 macOS 13。脚本构建当前架构的应用，使用稳定 bundle ID `io.github.houhongxu.eartap`。构建阶段不重置用户配置；安装脚本先停止同一身份的应用，再复制新包。
 
-构建输出不入库。提交前更新 `resources/Info.plist` 中的版本与构建号，并维护 `CHANGELOG.md`。当前没有签名发布流水线或预编译发行包；GitHub Actions 只做构建和自动测试。
+构建脚本从 `resources/EarTapIcon.png` 生成完整尺寸的 `EarTap.icns`。构建输出不入库。提交前更新 `resources/Info.plist` 中的版本与构建号，并维护 `CHANGELOG.md`。当前没有签名发布流水线或预编译发行包；GitHub Actions 只做构建和自动测试。
 
 公开 API 参考：[MediaPlayer](https://developer.apple.com/documentation/mediaplayer)、[Application Services](https://developer.apple.com/documentation/applicationservices)。

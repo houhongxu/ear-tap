@@ -2,6 +2,7 @@
 #import "Shortcut.h"
 #import "Storage.h"
 #import "MediaSession.h"
+#import "StatusIcon.h"
 
 @interface ETAppDelegate ()
 @property ETMediaSession *session;
@@ -14,6 +15,7 @@
 @property BOOL locked;
 @property BOOL stopping;
 @property BOOL busy;
+@property BOOL iconError;
 @property NSUInteger generation;
 @property NSUInteger received;
 @property NSUInteger sent;
@@ -23,7 +25,12 @@
 @implementation ETAppDelegate
 - (BOOL)accepting { return self.enabled && !self.sleeping && !self.locked && !self.stopping; }
 - (void)updateCounter {
-    self.statusItem.button.title = self.enabled ? @"EarTap" : @"EarTap ⏸";
+    ETStatusIconState state = ETStatusIconStateForFlags([self accepting], self.busy, self.iconError);
+    self.statusItem.button.title = @"";
+    self.statusItem.button.image = ETStatusIcon(state);
+    self.statusItem.button.contentTintColor = ETStatusIconTintColor(state);
+    self.statusItem.button.toolTip = ETStatusIconAccessibilityLabel(state);
+    self.statusItem.button.accessibilityLabel = ETStatusIconAccessibilityLabel(state);
     self.summaryItem.title = [NSString stringWithFormat:@"收到 %lu / 已发送 %lu", self.received, self.sent];
     self.toggleItem.title = self.enabled ? @"暂停映射" : @"启用映射";
 }
@@ -41,7 +48,7 @@
     (void)notification;
     self.pending = NSMutableArray.new;
     self.enabled = YES;
-    self.statusItem = [NSStatusBar.systemStatusBar statusItemWithLength:NSVariableStatusItemLength];
+    self.statusItem = [NSStatusBar.systemStatusBar statusItemWithLength:NSSquareStatusItemLength];
     NSMenu *menu = NSMenu.new;
     self.summaryItem = [menu addItemWithTitle:@"" action:nil keyEquivalent:@""];
     self.resultItem = [menu addItemWithTitle:@"等待媒体命令" action:nil keyEquivalent:@""];
@@ -61,9 +68,11 @@
                              NSWorkspaceSessionDidBecomeActiveNotification, NSWorkspaceSessionDidResignActiveNotification]) {
         [nc addObserver:self selector:@selector(lifecycle:) name:name object:nil];
     }
+    BOOL trusted = AXIsProcessTrusted();
+    self.iconError = !trusted;
     [self refreshSession];
-    ETLog([NSString stringWithFormat:@"READY accessibility=%d", AXIsProcessTrusted()]);
-    if (!AXIsProcessTrusted()) self.resultItem.title = @"请从菜单检查辅助功能权限";
+    ETLog([NSString stringWithFormat:@"READY accessibility=%d", trusted]);
+    if (!trusted) self.resultItem.title = @"请从菜单检查辅助功能权限";
 }
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)app hasVisibleWindows:(BOOL)visible {
     (void)app; (void)visible;
@@ -99,6 +108,8 @@
 - (void)checkPermission:(id)sender {
     (void)sender;
     BOOL trusted = AXIsProcessTrusted();
+    self.iconError = !trusted;
+    [self updateCounter];
     self.resultItem.title = trusted ? @"辅助功能权限正常" : @"请在系统设置中允许 EarTap";
     ETLog([NSString stringWithFormat:@"CHECK accessibility=%d", trusted]);
     if (!trusted) {
@@ -123,12 +134,15 @@
 }
 - (void)receive:(NSString *)source {
     if (![self accepting]) return;
+    self.iconError = NO;
     NSUInteger requestID = ++self.received;
     ETLog([NSString stringWithFormat:@"RECEIVED id=%lu source=%@", requestID, source]);
     [self updateCounter];
     if (self.pending.count >= 8) {
         ETLog([NSString stringWithFormat:@"QUEUE_FULL id=%lu", requestID]);
         self.resultItem.title = @"请求过多，已忽略";
+        self.iconError = YES;
+        [self updateCounter];
         return;
     }
     [self.pending addObject:@{@"id": @(requestID), @"time": @(NSProcessInfo.processInfo.systemUptime), @"generation": @(self.generation)}];
@@ -141,6 +155,7 @@
         @"KEYS_HELD": @"修饰键被按住，已取消", @"EXPIRED": @"请求等待过久，已取消",
         @"CANCELLED": @"操作已取消", @"EVENT_ERROR": @"按键发送失败"};
     self.resultItem.title = labels[status] ?: @"配置无效，请查看日志";
+    self.iconError = ![status isEqualToString:@"SENT"] && ![status isEqualToString:@"CANCELLED"];
     self.busy = NO;
     if (self.stopping) { [NSApp replyToApplicationShouldTerminate:YES]; return; }
     [self updateCounter];
@@ -171,6 +186,7 @@
     NSDictionary *request = self.pending.firstObject;
     [self.pending removeObjectAtIndex:0];
     self.busy = YES;
+    [self updateCounter];
     if (NSProcessInfo.processInfo.systemUptime - [request[@"time"] doubleValue] > 3) {
         [self finish:@"EXPIRED" request:request]; return;
     }

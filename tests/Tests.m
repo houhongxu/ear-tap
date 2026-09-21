@@ -49,6 +49,8 @@
 #undef MPRemoteCommandCenter
 #undef MPNowPlayingInfoCenter
 
+#import "../src/StatusIcon.m"
+
 static NSMutableArray<NSString *> *logs;
 static NSURL *configURL;
 static BOOL trusted = YES;
@@ -105,6 +107,15 @@ int main(int argc, const char *argv[]) {
     @autoreleasepool {
         CHECK(argc == 3);
         logs = NSMutableArray.new;
+        CHECK(ETStatusIconStateForFlags(YES, NO, NO) == ETStatusIconStateReady);
+        CHECK(ETStatusIconStateForFlags(NO, YES, YES) == ETStatusIconStatePaused);
+        CHECK(ETStatusIconStateForFlags(YES, YES, YES) == ETStatusIconStateSending);
+        CHECK(ETStatusIconStateForFlags(YES, NO, YES) == ETStatusIconStateError);
+        for (NSUInteger state = ETStatusIconStateReady; state <= ETStatusIconStateError; state++) {
+            NSImage *image = ETStatusIcon((ETStatusIconState)state);
+            CHECK(image.isTemplate && NSEqualSizes(image.size, NSMakeSize(18, 18)));
+            CHECK(ETStatusIconAccessibilityLabel((ETStatusIconState)state).length > 0);
+        }
         configURL = [NSURL fileURLWithPath:[@(argv[2]) stringByAppendingPathComponent:@"shortcut.json"]];
         NSString *failure = nil;
         NSDictionary *defaults = ETParseShortcut([NSData dataWithContentsOfFile:@(argv[1])], &failure);
