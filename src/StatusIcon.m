@@ -22,7 +22,6 @@ NSColor *ETStatusIconTintColor(ETStatusIconState state) {
 }
 
 static void ETDrawEarbud(void) {
-    [NSColor.blackColor setFill];
     [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(1.5, 9, 7.5, 7.5)] fill];
     [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(5.8, 3, 3.2, 8.5) xRadius:1.6 yRadius:1.6] fill];
 }
@@ -38,9 +37,10 @@ static void ETStrokeArc(CGFloat radius, CGFloat width) {
 NSImage *ETStatusIcon(ETStatusIconState state) {
     NSImage *image = [NSImage imageWithSize:NSMakeSize(18, 18) flipped:NO drawingHandler:^BOOL(NSRect rect) {
         (void)rect;
+        NSColor *color = ETStatusIconTintColor(state);
+        [color setFill];
+        [color setStroke];
         ETDrawEarbud();
-        [NSColor.blackColor setStroke];
-        [NSColor.blackColor setFill];
         if (state == ETStatusIconStatePaused) {
             [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(11.2, 6.2, 1.8, 6.4) xRadius:0.9 yRadius:0.9] fill];
             [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(14.4, 6.2, 1.8, 6.4) xRadius:0.9 yRadius:0.9] fill];
@@ -61,7 +61,7 @@ NSImage *ETStatusIcon(ETStatusIconState state) {
         }
         return YES;
     }];
-    image.template = YES;
+    image.template = NO;
     image.accessibilityDescription = ETStatusIconAccessibilityLabel(state);
     return image;
 }
