@@ -115,6 +115,8 @@ int main(int argc, const char *argv[]) {
             NSImage *image = ETStatusIcon((ETStatusIconState)state);
             CHECK(image.isTemplate && NSEqualSizes(image.size, NSMakeSize(18, 18)));
             CHECK(ETStatusIconAccessibilityLabel((ETStatusIconState)state).length > 0);
+            NSColor *tint = [ETStatusIconTintColor((ETStatusIconState)state) colorUsingColorSpace:NSColorSpace.genericRGBColorSpace];
+            CHECK(tint.redComponent > 0.99 && tint.greenComponent > 0.99 && tint.blueComponent > 0.99);
         }
         configURL = [NSURL fileURLWithPath:[@(argv[2]) stringByAppendingPathComponent:@"shortcut.json"]];
         NSString *failure = nil;

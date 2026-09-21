@@ -17,12 +17,8 @@ NSString *ETStatusIconAccessibilityLabel(ETStatusIconState state) {
 }
 
 NSColor *ETStatusIconTintColor(ETStatusIconState state) {
-    switch (state) {
-        case ETStatusIconStatePaused: return NSColor.secondaryLabelColor;
-        case ETStatusIconStateSending: return NSColor.systemGreenColor;
-        case ETStatusIconStateError: return NSColor.systemRedColor;
-        default: return NSColor.controlAccentColor;
-    }
+    CGFloat alpha = state == ETStatusIconStatePaused ? 0.55 : 1.0;
+    return [NSColor.whiteColor colorWithAlphaComponent:alpha];
 }
 
 static void ETDrawEarbud(void) {
