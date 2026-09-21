@@ -122,10 +122,6 @@
     [NSWorkspace.sharedWorkspace.notificationCenter removeObserver:self];
 }
 - (void)receive:(NSString *)source {
-    if ([source isEqualToString:@"pause"]) {
-        ETLog(@"IGNORED source=pause reason=pause-filter");
-        return;
-    }
     if (![self accepting]) return;
     NSUInteger requestID = ++self.received;
     ETLog([NSString stringWithFormat:@"RECEIVED id=%lu source=%@", requestID, source]);
