@@ -28,7 +28,6 @@
     ETStatusIconState state = ETStatusIconStateForFlags([self accepting], self.busy, self.iconError);
     self.statusItem.button.title = @"";
     self.statusItem.button.image = ETStatusIcon(state);
-    self.statusItem.button.contentTintColor = ETStatusIconTintColor(state);
     self.statusItem.button.toolTip = ETStatusIconAccessibilityLabel(state);
     self.statusItem.button.accessibilityLabel = ETStatusIconAccessibilityLabel(state);
     self.summaryItem.title = [NSString stringWithFormat:@"收到 %lu / 已发送 %lu", self.received, self.sent];

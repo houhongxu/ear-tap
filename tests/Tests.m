@@ -103,6 +103,20 @@ static BOOL hasLog(NSString *text) {
     for (NSString *line in logs) if ([line containsString:text]) return YES;
     return NO;
 }
+static BOOL isWhiteStatusImage(NSImage *image) {
+    NSBitmapImageRep *rep = [NSBitmapImageRep imageRepWithData:image.TIFFRepresentation];
+    if (!rep) return NO;
+    BOOL found = NO;
+    for (NSInteger y = 0; y < rep.pixelsHigh; y++) {
+        for (NSInteger x = 0; x < rep.pixelsWide; x++) {
+            NSColor *pixel = [[rep colorAtX:x y:y] colorUsingColorSpace:NSColorSpace.genericRGBColorSpace];
+            if (pixel.alphaComponent < 0.02) continue;
+            found = YES;
+            if (pixel.redComponent < 0.99 || pixel.greenComponent < 0.99 || pixel.blueComponent < 0.99) return NO;
+        }
+    }
+    return found;
+}
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
         CHECK(argc == 3);
@@ -113,7 +127,8 @@ int main(int argc, const char *argv[]) {
         CHECK(ETStatusIconStateForFlags(YES, NO, YES) == ETStatusIconStateError);
         for (NSUInteger state = ETStatusIconStateReady; state <= ETStatusIconStateError; state++) {
             NSImage *image = ETStatusIcon((ETStatusIconState)state);
-            CHECK(image.isTemplate && NSEqualSizes(image.size, NSMakeSize(18, 18)));
+            CHECK(!image.isTemplate && NSEqualSizes(image.size, NSMakeSize(18, 18)));
+            CHECK(isWhiteStatusImage(image));
             CHECK(ETStatusIconAccessibilityLabel((ETStatusIconState)state).length > 0);
             NSColor *tint = [ETStatusIconTintColor((ETStatusIconState)state) colorUsingColorSpace:NSColorSpace.genericRGBColorSpace];
             CHECK(tint.redComponent > 0.99 && tint.greenComponent > 0.99 && tint.blueComponent > 0.99);
